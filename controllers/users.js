@@ -10,9 +10,22 @@ const { NODE_ENV, JWT_SECRET } = process.env;
 
 module.exports.getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.send({ data: users }))
+    .then((users) => res.send(users))
     .catch(() => {
       next(new ServerError('На сервере произошла ошибка'));
+    });
+};
+
+module.exports.getProfile = (req, res, next) => {
+  User.findById(req.user._id)
+    .orFail(() => { throw new NotFoundError('По переданному id отсутствуют данные'); })
+    .then((user) => res.send({ data: user }))
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new IncorrectDataError('Переданы некорректные данные'));
+      } else {
+        next(new ServerError('На сервере произошла ошибка'));
+      }
     });
 };
 
@@ -45,16 +58,26 @@ module.exports.createUser = (req, res, next) => {
 module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
-    .orFail(() => { throw new NotFoundError('По переданному id отсутствуют данные'); })
-    .then((user) => res.send({ data: user }))
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        throw new NotFoundError('Такого пользователя не существует');
+      }
+    })
     .catch(next);
 };
 
 module.exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(req.user._id, { avatar }, { new: true, runValidators: true })
-    .orFail(() => { throw new NotFoundError('По переданному id отсутствуют данные'); })
-    .then((user) => res.send(user))
+    .then((user) => {
+      if (user) {
+        res.send(user);
+      } else {
+        throw new NotFoundError('Такого пользователя не существует');
+      }
+    })
     .catch(next);
 };
 
@@ -67,12 +90,11 @@ module.exports.login = (req, res, next) => {
         NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
         { expiresIn: '7d' },
       );
-      res
-        .cookie('jwt', token, {
-          httpOnly: true,
-          maxAge: 3600000 * 24 * 7,
-        })
-        .send({ jwt: token });
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        maxAge: 3600000 * 24 * 7,
+      });
+      res.send('Аутентификация прошла успешно');
     })
     .catch((err) => {
       next(err);
