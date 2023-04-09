@@ -1,15 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const {
-  celebrate, Joi, errors, isCelebrateError,
+  celebrate, Joi, errors,
 } = require('celebrate');
 const { login, createUser } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 const validate = require('./utils/validate');
 const NotFoundError = require('./utils/errors/notFoundError');
-const IncorrectDataError = require('./utils/errors/incorrectDataError');
 
 const { PORT = 3000 } = process.env;
 
@@ -48,30 +46,14 @@ app.use('*', (req, res, next) => {
   next(new NotFoundError('Страница не найдена'));
 });
 
-app.use(errors());
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 
-app.use((err, req, res, next) => {
-  let details;
-
-  if (isCelebrateError(err)) {
-    details = new IncorrectDataError(err.details.get('body'));
-  } else {
-    details = err;
-  }
-
-  const { statusCode = 500, message = 'На сервере произошла ошибка' } = details;
-  res.status(statusCode).send({
-    message,
-  });
-  next();
-});
+app.use(errors());
 
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);

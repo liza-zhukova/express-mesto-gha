@@ -20,20 +20,19 @@ module.exports.getProfile = (req, res, next) => {
   User.findById(req.user._id)
     .orFail(() => { throw new NotFoundError('По переданному id отсутствуют данные'); })
     .then((user) => res.send({ data: user }))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new IncorrectDataError('Переданы некорректные данные'));
-      } else {
-        next(new ServerError('На сервере произошла ошибка'));
-      }
-    });
+    .catch(next);
 };
 
 module.exports.getUserId = (req, res, next) => {
   User.findById(req.params.userId)
     .orFail(() => { throw new NotFoundError('По переданному id отсутствуют данные'); })
     .then((user) => res.send({ data: user }))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        return next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.createUser = (req, res, next) => {
@@ -47,11 +46,12 @@ module.exports.createUser = (req, res, next) => {
     .then((user) => res.send({ data: user }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new IncorrectDataError('Переданы некорректные данные'));
-      } else if (err.code === 11000) {
-        next(new ConflictError('Пользователь с такими e-mail уже существует'));
+        return next(new IncorrectDataError('Переданы некорректные данные'));
       }
-      next(new ServerError('На сервере произошла ошибка'));
+      if (err.code === 11000) {
+        return next(new ConflictError('Пользователь с таким e-mail уже существует'));
+      }
+      return next(err);
     });
 };
 
@@ -61,11 +61,15 @@ module.exports.updateUser = (req, res, next) => {
     .then((user) => {
       if (user) {
         res.send({ data: user });
-      } else {
-        throw new NotFoundError('Такого пользователя не существует');
       }
+      return next(new NotFoundError('Такого пользователя не существует'));
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.updateAvatar = (req, res, next) => {
@@ -74,9 +78,8 @@ module.exports.updateAvatar = (req, res, next) => {
     .then((user) => {
       if (user) {
         res.send(user);
-      } else {
-        throw new NotFoundError('Такого пользователя не существует');
       }
+      return next(new NotFoundError('Такого пользователя не существует'));
     })
     .catch(next);
 };

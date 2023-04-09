@@ -1,6 +1,7 @@
 const Card = require('../models/card');
 const NotFoundError = require('../utils/errors/notFoundError');
 const ForbiddenError = require('../utils/errors/forbiddenError');
+const IncorrectDataError = require('../utils/errors/incorrectDataError');
 
 module.exports.getCards = (req, res, next) => {
   Card.find({})
@@ -17,20 +18,30 @@ module.exports.createCard = (req, res, next) => {
 
   Card.create({ name, link, owner })
     .then((cardItem) => res.send(cardItem))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.deleteCard = (req, res, next) => {
-  Card.findByIdAndRemove(req.params.cardId)
+  Card.findById(req.params.cardId)
     .populate(['owner', 'likes'])
-    .orFail(new NotFoundError('Такой карточки не сущетвует'))
+    .orFail(new NotFoundError('Такой карточки не сущеcтвует'))
     .then((card) => {
       if (card.owner._id.toString() !== req.user._id) {
         return Promise.reject(new ForbiddenError('Недостаточно прав'));
       } return Card.remove();
     })
     .then((card) => res.send(card))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.likeCard = (req, res, next) => {
@@ -43,7 +54,12 @@ module.exports.likeCard = (req, res, next) => {
         throw new NotFoundError('Такой карточки не существует');
       }
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.dislikeCard = (req, res, next) => {
@@ -56,5 +72,10 @@ module.exports.dislikeCard = (req, res, next) => {
         throw new NotFoundError('Такой карточки не существует');
       }
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
