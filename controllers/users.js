@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const IncorrectDataError = require('../utils/errors/incorrectDataError');
 const NotFoundError = require('../utils/errors/notFoundError');
-const ServerError = require('../utils/errors/serverError');
 const ConflictError = require('../utils/errors/conflictError');
 
 const { NODE_ENV, JWT_SECRET } = process.env;
@@ -11,9 +10,7 @@ const { NODE_ENV, JWT_SECRET } = process.env;
 module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch(() => {
-      next(new ServerError('На сервере произошла ошибка'));
-    });
+    .catch(next);
 };
 
 module.exports.getProfile = (req, res, next) => {
@@ -81,7 +78,12 @@ module.exports.updateAvatar = (req, res, next) => {
       }
       return next(new NotFoundError('Такого пользователя не существует'));
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new IncorrectDataError('Переданы некорректные данные'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.login = (req, res, next) => {
