@@ -3,7 +3,7 @@ const { celebrate, Joi } = require('celebrate');
 const {
   getUsers, getUserId, createUser, updateUser, updateAvatar, getProfile,
 } = require('../controllers/users');
-const validate = require('../utils/validate');
+const { validateUrl } = require('../utils/validateUrl');
 
 router.get('/users', getUsers);
 router.get(
@@ -30,7 +30,7 @@ router.patch(
   '/users/me/avatar',
   celebrate({
     body: Joi.object().keys({
-      avatar: Joi.string().custom(validate).required(),
+      avatar: Joi.string().custom(validateUrl).required(),
     }),
   }),
   updateAvatar,

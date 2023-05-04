@@ -6,7 +6,7 @@ const {
 } = require('celebrate');
 const { login, createUser } = require('./controllers/users');
 const auth = require('./middlewares/auth');
-const validate = require('./utils/validate');
+const { validateUrl } = require('./utils/validateUrl');
 const NotFoundError = require('./utils/errors/notFoundError');
 
 const { PORT = 3000 } = process.env;
@@ -34,7 +34,7 @@ app.post(
       password: Joi.string().required(),
       name: Joi.string().min(2).max(30),
       about: Joi.string().min(2).max(30),
-      avatar: Joi.string().custom(validate),
+      avatar: Joi.string().custom(validateUrl),
     }),
   }),
   createUser,
